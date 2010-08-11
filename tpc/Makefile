@@ -23,7 +23,7 @@ protobuf_generator ?= protoc
 thrift_generator ?= thrift
 activemqprotobuf_cp := $(subst $(space),:,$(wildcard lib/activemq-*.jar))
 activemqprotobuf_generator ?= java -cp "$(activemqprotobuf_cp)" org.apache.activemq.protobuf.compiler.AltJavaGenerator
-cks_generator ?= java -jar lib/cks-gen.jar
+cks_generator ?= java -jar lib/cks-tool.jar
 avro_cp ?= $(subst $(space),:,$(wildcard lib/avro-*.jar lib/jackson-*.jar lib/jopt-simple-*.jar))
 avro_generator ?= java -cp $(avro_cp) org.apache.avro.tool.Main
 protostuff_compiler ?= $(wildcard lib/protostuff-compiler-*.jar)
@@ -108,7 +108,7 @@ build/gen/$(2).gen: schema/$(2)
 ifneq ($(findstring .activemq.proto,$(2)),)
 	$(p1)$(activemqprotobuf_generator) --out=build/gen/$(2) $$<
 else ifneq ($(findstring .protostuff.proto,$(2)),)
-	$(p1)java -Dsource=$$< -Doutput=java_bean -Doptions=builder_pattern -DoutputDir=build/gen/$(2) -jar $(protostuff_compiler)
+	$(p1)java -Dsource=$$< -Doutput=java_bean -Doptions=builder_pattern,alphanumeric,generate_field_map,separate_schema -DoutputDir=build/gen/$(2) -jar $(protostuff_compiler)
 else ifneq ($(findstring .proto,$(2)),)
 	$(p1)$(protobuf_generator) --java_out=build/gen/$(2) $$<
 else ifneq ($(findstring .thrift,$(2)),)

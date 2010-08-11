@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,6 +32,16 @@ public class BenchmarkRunner
 	 */
 	final static long DEFAULT_WARMUP_MSECS = 3000;
 
+	// These tests aren't included by default.  Use the "-hidden" flag to enable them.
+	private static final HashSet<String> HIDDEN = new HashSet<String>();
+	static {
+		// CKS is not included because it's not really publicly released.
+		HIDDEN.add("cks");
+		HIDDEN.add("cks-text");
+	}
+
+	private static final String ERROR_DIVIDER = "-------------------------------------------------------------------";
+
 	public static void main(String[] args)
 	{
 		// --------------------------------------------------
@@ -43,6 +55,7 @@ public class BenchmarkRunner
 		boolean printChart = false;
 		boolean prewarm = false;
 		String dataFileName = null;
+		boolean enableHidden = false;
 
 		Set<String> optionsSeen = new HashSet<String>();
 
@@ -173,6 +186,14 @@ public class BenchmarkRunner
 				assert !printChart;
 				printChart = true;
 			}
+			else if (option.equals("hidden")) {
+				if (value != null) {
+					System.err.println("The \"hidden\" option does not take a value: \"" + arg + "\"");
+					System.exit(1); return;
+				}
+				assert !enableHidden;
+				enableHidden = true;
+			}
 			else if (option.equals("help")) {
 				if (value != null) {
 					System.err.println("The \"help\" option does not take a value: \"" + arg + "\"");
@@ -187,13 +208,14 @@ public class BenchmarkRunner
 				System.out.println("Usage: run [options] <data-file>");
 				System.out.println();
 				System.out.println("Options:");
-				System.out.println("  -iterations=n              [default=" + DEFAULT_ITERATIONS + "]");
-				System.out.println("  -trials=n                  [default=" + DEFAULT_TRIALS + "]");
-				System.out.println("  -warmup-time=milliseconds  [default=" + DEFAULT_WARMUP_MSECS + "]");
-				System.out.println("  -pre-warmup");
-				System.out.println("  -chart");
+				System.out.println("  -iterations=n         [default=" + DEFAULT_ITERATIONS + "]");
+				System.out.println("  -trials=n             [default=" + DEFAULT_TRIALS + "]");
+				System.out.println("  -warmup-time=millis   [default=" + DEFAULT_WARMUP_MSECS + "]");
+				System.out.println("  -pre-warmup           (warm all serializers before the first measurement)");
+				System.out.println("  -chart                (generate a Google Chart URL for the results)");
 				System.out.println("  -include=impl1,impl2,impl3,...");
 				System.out.println("  -exclude=impl1,impl2,impl3,...");
+				System.out.println("  -hidden               (enable \"hidden\" serializers)");
 				System.out.println("  -help");
 				System.out.println();
 				System.out.println("Example: run  -chart -include=protobuf,thrift  data/media.1.cks");
@@ -201,7 +223,7 @@ public class BenchmarkRunner
 				System.exit(0); return;
 			}
 			else {
-				System.err.println("Unknown option \"" + option + "\": \"" + arg + "\"");
+				System.err.println("Unknown option: \"" + arg + "\"");
 				System.err.println("Use \"-help\" for usage information.");
 				System.exit(1); return;
 			}
@@ -315,15 +337,32 @@ public class BenchmarkRunner
 
 		Set<String> matched = new HashSet<String>();
 
+		Iterable<TestGroup.Entry<Object,Object>> available;
+
+		if (enableHidden) {
+			// Use all of them.
+			available = group_.entries;
+		} else {
+			// Remove the hidden ones.
+			ArrayList<TestGroup.Entry<Object,Object>> unhidden = new ArrayList<TestGroup.Entry<Object,Object>>();
+			for (TestGroup.Entry<?,Object> entry_ : group.entries) {
+				@SuppressWarnings("unchecked")
+				TestGroup.Entry<Object,Object> entry = (TestGroup.Entry<Object,Object>) entry_;
+				String name = entry.serializer.getName();
+				if (!HIDDEN.contains(name)) unhidden.add(entry);
+			}
+			available = unhidden;
+		}
+
 		Iterable<TestGroup.Entry<Object,Object>> matchingEntries;
 		if (filterStrings == null) {
-			matchingEntries = group_.entries;
+			matchingEntries = available;
 		}
 		else {
 			ArrayList<TestGroup.Entry<Object,Object>> al = new ArrayList<TestGroup.Entry<Object,Object>>();
 			matchingEntries = al;
 
-			for (TestGroup.Entry<?,Object> entry_ : group.entries) {
+			for (TestGroup.Entry<?,Object> entry_ : available) {
 				@SuppressWarnings("unchecked")
 				TestGroup.Entry<Object,Object> entry = (TestGroup.Entry<Object,Object>) entry_;
 
@@ -348,12 +387,24 @@ public class BenchmarkRunner
 			unmatched.removeAll(matched);
 			for (String s : unmatched) {
 				System.err.println("Warning: there is no implementation name matching the pattern \"" + s + "\"");
+
+				if (!enableHidden) {
+					for (String hiddenName : HIDDEN) {
+						if (match(s, hiddenName)) {
+							System.err.println("(The \"" + hiddenName + "\", serializer is hidden by default.");
+							System.err.println(" Use the \"-hidden\" option to enable hidden serializers)");
+							break;
+						}
+					}
+				}
 			}
 		}
 
 		EnumMap<measurements, Map<String, Double>> values;
+		StringWriter errors = new StringWriter();
+		PrintWriter errorsPW = new PrintWriter(errors);
 		try {
-			values = start(iterations, trials, warmupTime, prewarm, matchingEntries, dataValue);
+			values = start(errorsPW, iterations, trials, warmupTime, prewarm, matchingEntries, dataValue);
 		}
 		catch (Exception ex) {
 			ex.printStackTrace(System.err);
@@ -362,6 +413,15 @@ public class BenchmarkRunner
 
 		if (printChart) {
 			printImages(values);
+		}
+
+		// Print errors after chart.  That way you can't miss it.
+		String errorsString = errors.toString();
+		if (errorsString.length() > 0) {
+			System.out.println(ERROR_DIVIDER);
+			System.out.println("Errors occurred during benchmarking:");
+			System.out.print(errorsString);
+			System.exit(1); return;
 		}
 	}
 
@@ -575,13 +635,13 @@ public class BenchmarkRunner
 	}
 
 	private static <J> EnumMap<measurements, Map<String, Double>>
-	start(int iterations, int trials, long warmupTime, boolean prewarm, Iterable<TestGroup.Entry<J,Object>> groups, J value) throws Exception
+	start(PrintWriter errors, int iterations, int trials, long warmupTime, boolean prewarm, Iterable<TestGroup.Entry<J,Object>> groups, J value) throws Exception
 	{
 		// Check correctness first.
 		System.out.println("Checking correctness...");
 		for (TestGroup.Entry<J,Object> entry : groups)
 		{
-			checkCorrectness(entry.transformer, entry.serializer, value);
+			checkCorrectness(errors, entry.transformer, entry.serializer, value);
 		}
 		System.out.println("[done]");
 
@@ -602,7 +662,7 @@ public class BenchmarkRunner
 			System.out.println("[done]");
 		}
 
-		System.out.printf("%-28s %6s %7s %7s %7s %7s %7s %7s %6s %5s\n",
+		System.out.printf("%-32s %6s %7s %7s %7s %7s %7s %7s %6s %5s\n",
 			"",
 			"create",
 			"ser",
@@ -621,65 +681,73 @@ public class BenchmarkRunner
 		for (TestGroup.Entry<J,Object> entry : groups)
 		{
 			TestCaseRunner<J> runner = new TestCaseRunner<J>(entry.transformer, entry.serializer, value);
-
 			String name = entry.serializer.getName();
+			try {
 
-			/*
-			 * Should only warm things for the serializer that we test next: HotSpot JIT will
-			 * otherwise spent most of its time optimizing slower ones... Use
-			 * -XX:CompileThreshold=1 to hint the JIT to start immediately
-			 *
-			 * Actually: 1 is often not a good value -- threshold is the number
-			 * of samples needed to trigger inlining, and there's no point in
-			 * inlining everything. Default value is in thousands, so lowering
-			 * it to, say, 1000 is usually better.
-			 */
-			warmCreation(runner, warmupTime);
+				/*
+				 * Should only warm things for the serializer that we test next: HotSpot JIT will
+				 * otherwise spent most of its time optimizing slower ones... Use
+				 * -XX:CompileThreshold=1 to hint the JIT to start immediately
+				 *
+				 * Actually: 1 is often not a good value -- threshold is the number
+				 * of samples needed to trigger inlining, and there's no point in
+				 * inlining everything. Default value is in thousands, so lowering
+				 * it to, say, 1000 is usually better.
+				 */
+				warmCreation(runner, warmupTime);
 
-			doGc();
-			double timeCreate = runner.runTakeMin(trials, Create, iterations * 100); // do more iteration for object creation because of its short time
+				doGc();
+				double timeCreate = runner.runTakeMin(trials, Create, iterations * 100); // do more iteration for object creation because of its short time
 
-			warmSerialization(runner, warmupTime);
+				warmSerialization(runner, warmupTime);
 
-			doGc();
-			double timeSerializeDifferentObjects = runner.runTakeMin(trials, Serialize, iterations);
+				doGc();
+				double timeSerializeDifferentObjects = runner.runTakeMin(trials, Serialize, iterations);
 
-			doGc();
-			double timeSerializeSameObject = runner.runTakeMin(trials, SerializeSameObject, iterations);
+				doGc();
+				double timeSerializeSameObject = runner.runTakeMin(trials, SerializeSameObject, iterations);
 
-			warmDeserialization(runner, warmupTime);
+				warmDeserialization(runner, warmupTime);
 
-			doGc();
-			double timeDeserializeNoFieldAccess = runner.runTakeMin(trials, Deserialize, iterations);
+				doGc();
+				double timeDeserializeNoFieldAccess = runner.runTakeMin(trials, Deserialize, iterations);
 
-			doGc();
-			double timeDeserializeAndCheckShallow = runner.runTakeMin(trials, DeserializeAndCheckShallow, iterations);
+				doGc();
+				double timeDeserializeAndCheckShallow = runner.runTakeMin(trials, DeserializeAndCheckShallow, iterations);
 
-			doGc();
-			double timeDeserializeAndCheck = runner.runTakeMin(trials, DeserializeAndCheck, iterations);
+				doGc();
+				double timeDeserializeAndCheck = runner.runTakeMin(trials, DeserializeAndCheck, iterations);
 
-			double totalTime = timeSerializeDifferentObjects + timeDeserializeAndCheck;
+				double totalTime = timeSerializeDifferentObjects + timeDeserializeAndCheck;
 
-			byte[] array = entry.serializer.serialize(entry.transformer.forward(value));
+				byte[] array = entry.serializer.serialize(entry.transformer.forward(value));
 
-			byte[] compressDeflate = compressDeflate(array);
+				byte[] compressDeflate = compressDeflate(array);
 
-			System.out.printf("%-28s %6.0f %7.0f %7.0f %7.0f %7.0f %7.0f %7.0f %6d %5d\n",
-				name,
-				timeCreate,
-				timeSerializeDifferentObjects,
-				timeSerializeSameObject,
-				timeDeserializeNoFieldAccess,
-				timeDeserializeAndCheckShallow,
-				timeDeserializeAndCheck,
-				totalTime,
-				array.length,
-				compressDeflate.length);
+				System.out.printf("%-32s %6.0f %7.0f %7.0f %7.0f %7.0f %7.0f %7.0f %6d %5d\n",
+					name,
+					timeCreate,
+					timeSerializeDifferentObjects,
+					timeSerializeSameObject,
+					timeDeserializeNoFieldAccess,
+					timeDeserializeAndCheckShallow,
+					timeDeserializeAndCheck,
+					totalTime,
+					array.length,
+					compressDeflate.length);
 
-			addValue(values, name, timeCreate, timeSerializeDifferentObjects, timeSerializeSameObject,
-				timeDeserializeNoFieldAccess, timeDeserializeAndCheckShallow, timeDeserializeAndCheck, totalTime,
-				array.length, compressDeflate.length);
+				addValue(values, name, timeCreate, timeSerializeDifferentObjects, timeSerializeSameObject,
+					timeDeserializeNoFieldAccess, timeDeserializeAndCheckShallow, timeDeserializeAndCheck, totalTime,
+					array.length, compressDeflate.length);
+			}
+			catch (Exception ex) {
+				System.out.println("ERROR: \"" + name + "\" crashed during benchmarking.");
+				errors.println(ERROR_DIVIDER);
+				errors.println("\"" + name + "\" crashed during benchmarking.");
+				ex.printStackTrace(errors);
+			}
 		}
+
 		return values;
 	}
 
@@ -704,24 +772,69 @@ public class BenchmarkRunner
 	 * Method that tries to validate correctness of serializer, using
 	 * round-trip (construct, serializer, deserialize; compare objects
 	 * after steps 1 and 3).
-	 * Currently only done for StdMediaDeserializer...
 	 */
-	private static <J> void checkCorrectness(Transformer<J,Object> transformer, Serializer<Object> serializer, J value)
+	private static <J> void checkCorrectness(PrintWriter errors, Transformer<J,Object> transformer, Serializer<Object> serializer, J value)
 		throws Exception
 	{
-		Object specialInput = transformer.forward(value);
-		byte[] array = serializer.serialize(specialInput);
-		Object specialOutput = serializer.deserialize(array);
-		J output = transformer.reverse(specialOutput);
+		Object specialInput;
+		String name = serializer.getName();
+		
+		try {
+			specialInput = transformer.forward(value);
+		}
+		catch (Exception ex) {
+			System.out.println("ERROR: \"" + name + "\" crashed during forward transformation.");
+			errors.println(ERROR_DIVIDER);
+			errors.println("\"" + name + "\" crashed during forward transformation.");
+			ex.printStackTrace(errors);
+			return;
+		}
+
+		byte[] array;
+		
+		try {
+			array = serializer.serialize(specialInput);
+		}
+		catch (Exception ex) {
+			System.out.println("ERROR: \"" + name + "\" crashed during serialization.");
+			errors.println(ERROR_DIVIDER);
+			errors.println("\"" + name + "\" crashed during serialization.");
+			ex.printStackTrace(errors);
+			return;
+		}
+
+		Object specialOutput;
+		
+		try {
+			specialOutput = serializer.deserialize(array);
+		}
+		catch (Exception ex) {
+			System.out.println("ERROR: \"" + name + "\" crashed during deserialization.");
+			errors.println(ERROR_DIVIDER);
+			errors.println("\"" + name + "\" crashed during deserialization.");
+			ex.printStackTrace(errors);
+			return;
+		}
+
+		J output;
+		try {
+			output = transformer.reverse(specialOutput);
+		}
+		catch (Exception ex) {
+			System.out.println("ERROR: \"" + name + "\" crashed during reverse transformation.");
+			errors.println(ERROR_DIVIDER);
+			errors.println("\"" + name + "\" crashed during reverse transformation.");
+			ex.printStackTrace(errors);
+			return;
+		}
+
 
 		if (!value.equals(output)) {
-			/* Should throw an exception; but for now (that we have a few
-							 * failures) let's just whine...
-							 */
-			//throw new Exception("Error: "+msg);
-			System.err.println("WARN: serializer \"" + serializer.getName() + "\" failed round-trip test.");
-			System.err.println("ORIGINAL:  " + value);
-			System.err.println("ROUNDTRIP: " + output);
+			System.out.println("ERROR: \"" + name + "\" failed round-trip check.");
+			errors.println(ERROR_DIVIDER);
+			errors.println("\"" + name + "\" failed round-trip check.");
+			errors.println("ORIGINAL:  " + value);
+			errors.println("ROUNDTRIP: " + output);
 		}
 	}
 
@@ -793,8 +906,9 @@ public class BenchmarkRunner
 			if (barThickness == 1) break;
 		}
 
+		boolean truncated = false;
 		if (height > maxHeight) {
-			System.err.println("WARNING: Not enough room to fit all bars in chart.");
+			truncated = true;
 			height = maxHeight;
 		}
 
@@ -808,6 +922,9 @@ public class BenchmarkRunner
 			+ "&chxl=0:|" + names.substring(0, names.length() - 1)
 			+ "&chm=N *f*,000000,0,-1,10&lklk&chdlp=t&chco=660000|660033|660066|660099|6600CC|6600FF|663300|663333|663366|663399|6633CC|6633FF|666600|666633|666666&cht=bhg&chbh=" + barThickness + ",0," + barSpacing + "&nonsense=aaa.png'/>");
 
+		if (truncated) {
+			System.err.println("WARNING: Not enough room to fit all bars in chart.");
+		}
 	}
 
 	private static void addValue(
