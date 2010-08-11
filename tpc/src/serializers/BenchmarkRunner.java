@@ -244,6 +244,14 @@ public class BenchmarkRunner
 		ProtobufJson.register(groups);
 		CksText.register(groups);
 		Gson.register(groups);
+		
+		//Yaml
+		SnakeYaml.register(groups);
+		SnakeYamlOptimized.register(groups);
+		Jvyaml.register(groups);
+		Jvyamlb.register(groups);
+		YamlBeans.register(groups);
+		JYaml.register(groups);
 
 		// XML-based formats.
 		Stax.register(groups);
