@@ -32,15 +32,15 @@ public class SnakeYamlOptimized
 	    
 	    private Yaml yaml;
 
-        {
+	    {
             yaml = new Yaml();
+	    yaml.setAttachBufferToMark(false);
 	    }
-	    
 	    
 		public Object deserialize(byte[] array) throws Exception
 		{
 			ByteArrayInputStream in = new ByteArrayInputStream(array);
-			return yaml.load(in, false);
+			return yaml.load(in);
 		}
 
 		public byte[] serialize(Object data) throws java.io.IOException
