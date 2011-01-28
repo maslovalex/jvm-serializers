@@ -1,11 +1,16 @@
 package serializers;
 
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.dyuproject.protostuff.IOUtil;
+import com.dyuproject.protostuff.Input;
 import com.dyuproject.protostuff.LinkedBuffer;
+import com.dyuproject.protostuff.Output;
+import com.dyuproject.protostuff.ProtobufIOUtil;
+import com.dyuproject.protostuff.ProtostuffIOUtil;
 import com.dyuproject.protostuff.Schema;
 import com.dyuproject.protostuff.runtime.RuntimeSchema;
 
@@ -18,14 +23,25 @@ public final class Protostuff
     
     public static void register(TestGroups groups)
     {
-        groups.media.add(MediaTransformer, MediaSerializer);
-        groups.media.add(JavaBuiltIn.MediaTransformer, RuntimeMediaSerializer);
+        // generated code
+        groups.media.add(MediaTransformer, ProtostuffMediaSerializer);
+
+        // manual (hand-coded schema, no autoboxing)
+        groups.media.add(JavaBuiltIn.MediaTransformer, ProtostuffManualMediaSerializer);
+
+        // runtime (reflection)
+        groups.media.add(JavaBuiltIn.MediaTransformer, ProtostuffRuntimeMediaSerializer);
+
+        // protobuf serialization + generated code
+        groups.media.add(MediaTransformer, ProtobufMediaSerializer);
         
-        groups.media.add(MediaTransformer, MediaSerializerGE);
-        groups.media.add(JavaBuiltIn.MediaTransformer, RuntimeMediaSerializerGE);
+        /*protostuff has too many entries
+        
+        // protobuf serialization + runtime
+        groups.media.add(JavaBuiltIn.MediaTransformer, ProtobufRuntimeMediaSerializer);*/
     }
     
-    public static final Serializer<MediaContent> MediaSerializer = 
+    public static final Serializer<MediaContent> ProtostuffMediaSerializer = 
         new Serializer<MediaContent>()
     {
         final LinkedBuffer buffer = LinkedBuffer.allocate(512);
@@ -33,7 +49,7 @@ public final class Protostuff
         public MediaContent deserialize(byte[] array) throws Exception
         {
             final MediaContent mc = new MediaContent();
-            IOUtil.mergeFrom(array, mc);
+            ProtostuffIOUtil.mergeFrom(array, mc, mc.cachedSchema());
             return mc;
         }
 
@@ -41,7 +57,38 @@ public final class Protostuff
         {
             try
             {
-                return IOUtil.toByteArray(content, buffer);
+                return ProtostuffIOUtil.toByteArray(content, content.cachedSchema(), buffer);
+            }
+            finally
+            {
+                buffer.clear();
+            }
+        }
+        
+        public String getName()
+        {
+            return "protostuff";
+        }
+        
+    };
+
+    public static final Serializer<MediaContent> ProtobufMediaSerializer = 
+        new Serializer<MediaContent>()
+    {
+        final LinkedBuffer buffer = LinkedBuffer.allocate(512);
+
+        public MediaContent deserialize(byte[] array) throws Exception
+        {
+            final MediaContent mc = new MediaContent();
+            ProtobufIOUtil.mergeFrom(array, mc, mc.cachedSchema());
+            return mc;
+        }
+
+        public byte[] serialize(MediaContent content) throws Exception
+        {
+            try
+            {
+                return ProtobufIOUtil.toByteArray(content, content.cachedSchema(), buffer);
             }
             finally
             {
@@ -56,38 +103,7 @@ public final class Protostuff
         
     };
 
-    public static final Serializer<MediaContent> MediaSerializerGE = 
-        new Serializer<MediaContent>()
-    {
-        final LinkedBuffer buffer = LinkedBuffer.allocate(512);
-
-        public MediaContent deserialize(byte[] array) throws Exception
-        {
-            final MediaContent mc = new MediaContent();
-            IOUtil.mergeFrom(array, 0, array.length, mc, mc.cachedSchema(), true);
-            return mc;
-        }
-
-        public byte[] serialize(MediaContent content) throws Exception
-        {
-            try
-            {
-                return IOUtil.toByteArray(content, content.cachedSchema(), buffer, true);
-            }
-            finally
-            {
-                buffer.clear();
-            }
-        }
-        
-        public String getName()
-        {
-            return "protostuff-core-ge";
-        }
-        
-    };
-
-    public static final Serializer<data.media.MediaContent> RuntimeMediaSerializer = 
+    public static final Serializer<data.media.MediaContent> ProtostuffRuntimeMediaSerializer = 
         new Serializer<data.media.MediaContent>()
     {
 
@@ -97,7 +113,7 @@ public final class Protostuff
         public data.media.MediaContent deserialize(byte[] array) throws Exception
         {
             data.media.MediaContent mc = new data.media.MediaContent();
-            IOUtil.mergeFrom(array, mc, schema);
+            ProtostuffIOUtil.mergeFrom(array, mc, schema);
             return mc;
         }
 
@@ -105,7 +121,40 @@ public final class Protostuff
         {
             try
             {
-                return IOUtil.toByteArray(content, schema, buffer);
+                return ProtostuffIOUtil.toByteArray(content, schema, buffer);
+            }
+            finally
+            {
+                buffer.clear();
+            }
+        }
+        
+        public String getName()
+        {
+            return "protostuff-runtime";
+        }
+        
+    };
+
+    public static final Serializer<data.media.MediaContent> ProtobufRuntimeMediaSerializer = 
+        new Serializer<data.media.MediaContent>()
+    {
+
+	    final Schema<data.media.MediaContent> schema = RuntimeSchema.getSchema(data.media.MediaContent.class);
+        final LinkedBuffer buffer = LinkedBuffer.allocate(512);
+
+        public data.media.MediaContent deserialize(byte[] array) throws Exception
+        {
+            data.media.MediaContent mc = new data.media.MediaContent();
+            ProtobufIOUtil.mergeFrom(array, mc, schema);
+            return mc;
+        }
+
+        public byte[] serialize(data.media.MediaContent content) throws Exception
+        {
+            try
+            {
+                return ProtobufIOUtil.toByteArray(content, schema, buffer);
             }
             finally
             {
@@ -120,17 +169,15 @@ public final class Protostuff
         
     };
 
-    public static final Serializer<data.media.MediaContent> RuntimeMediaSerializerGE = 
+    public static final Serializer<data.media.MediaContent> ProtostuffManualMediaSerializer = 
         new Serializer<data.media.MediaContent>()
     {
-
-	    final Schema<data.media.MediaContent> schema = RuntimeSchema.getSchema(data.media.MediaContent.class);
         final LinkedBuffer buffer = LinkedBuffer.allocate(512);
 
         public data.media.MediaContent deserialize(byte[] array) throws Exception
         {
-            final data.media.MediaContent mc = new data.media.MediaContent();
-            IOUtil.mergeFrom(array, 0, array.length, mc, schema, true);
+            data.media.MediaContent mc = new data.media.MediaContent();
+            ProtostuffIOUtil.mergeFrom(array, mc, MEDIA_CONTENT_SCHEMA);
             return mc;
         }
 
@@ -138,7 +185,7 @@ public final class Protostuff
         {
             try
             {
-                return IOUtil.toByteArray(content, schema, buffer, true);
+                return ProtostuffIOUtil.toByteArray(content, MEDIA_CONTENT_SCHEMA, buffer);
             }
             finally
             {
@@ -148,12 +195,350 @@ public final class Protostuff
         
         public String getName()
         {
-            return "protostuff-runtime-ge";
+            return "protostuff-manual";
         }
         
     };
-    
 
+    static final Schema<data.media.MediaContent> MEDIA_CONTENT_SCHEMA = new Schema<data.media.MediaContent>()
+    {
+        // schema methods
+
+        public data.media.MediaContent newMessage()
+        {
+            return new data.media.MediaContent();
+        }
+
+        public Class<data.media.MediaContent> typeClass()
+        {
+            return data.media.MediaContent.class;
+        }
+
+        public String messageName()
+        {
+            return data.media.MediaContent.class.getSimpleName();
+        }
+
+        public String messageFullName()
+        {
+            return data.media.MediaContent.class.getName();
+        }
+
+        public boolean isInitialized(data.media.MediaContent message)
+        {
+            return true;
+        }
+
+        public void mergeFrom(Input input, data.media.MediaContent message) throws IOException
+        {
+            for(int number = input.readFieldNumber(this);; number = input.readFieldNumber(this))
+            {
+                switch(number)
+                {
+                    case 0:
+                        return;
+                    case 1:
+                        if(message.images == null)
+                            message.images = new ArrayList<data.media.Image>();
+                        message.images.add(input.mergeObject(null, IMAGE_SCHEMA));
+                        break;
+
+                    case 2:
+                        message.media = input.mergeObject(message.media, MEDIA_SCHEMA);
+                        break;
+
+                    default:
+                        input.handleUnknownField(number, this);
+                }   
+            }
+        }
+
+
+        public void writeTo(Output output, data.media.MediaContent message) throws IOException
+        {
+            for(data.media.Image image : message.images)
+                output.writeObject(1, image, IMAGE_SCHEMA, true);
+
+            output.writeObject(2, message.media, MEDIA_SCHEMA, false);
+
+        }
+
+        public String getFieldName(int number)
+        {
+            switch(number)
+            {
+                case 1: return "image";
+                case 2: return "media";
+                default: return null;
+            }
+        }
+
+        public int getFieldNumber(String name)
+        {
+            final Integer number = fieldMap.get(name);
+            return number == null ? 0 : number.intValue();
+        }
+
+        final java.util.HashMap<String,Integer> fieldMap = new java.util.HashMap<String,Integer>();
+        {
+            fieldMap.put("image", 1);
+            fieldMap.put("media", 2);
+        }
+    };
+
+    static final Schema<data.media.Media> MEDIA_SCHEMA = new Schema<data.media.Media>()
+    {
+        // schema methods
+
+        public data.media.Media newMessage()
+        {
+            return new data.media.Media();
+        }
+
+        public Class<data.media.Media> typeClass()
+        {
+            return data.media.Media.class;
+        }
+
+        public String messageName()
+        {
+            return data.media.Media.class.getSimpleName();
+        }
+
+        public String messageFullName()
+        {
+            return data.media.Media.class.getName();
+        }
+
+        public boolean isInitialized(data.media.Media message)
+        {
+            return true;
+        }
+
+        public void mergeFrom(Input input, data.media.Media message) throws IOException
+        {
+            for(int number = input.readFieldNumber(this);; number = input.readFieldNumber(this))
+            {
+                switch(number)
+                {
+                    case 0:
+                        return;
+                    case 1:
+                        message.uri = input.readString();
+                        break;
+                    case 2:
+                        message.title = input.readString();
+                        break;
+                    case 3:
+                        message.width = input.readInt32();
+                        break;
+                    case 4:
+                        message.height = input.readInt32();
+                        break;
+                    case 5:
+                        message.format = input.readString();
+                        break;
+                    case 6:
+                        message.duration = input.readInt64();
+                        break;
+                    case 7:
+                        message.size = input.readInt64();
+                        break;
+                    case 8:
+                        message.bitrate = input.readInt32();
+                        message.hasBitrate = true;
+                        break;
+                    case 9:
+                        if(message.persons == null)
+                            message.persons = new ArrayList<String>();
+                        message.persons.add(input.readString());
+                        break;
+                    case 10:
+                        message.player = data.media.Media.Player.values()[input.readEnum()];
+                        break;
+                    case 11:
+                        message.copyright = input.readString();
+                        break;
+                    default:
+                        input.handleUnknownField(number, this);
+                }   
+            }
+        }
+
+
+        public void writeTo(Output output, data.media.Media message) throws IOException
+        {
+            output.writeString(1, message.uri, false);
+
+            if(message.title != null)
+                output.writeString(2, message.title, false);
+
+            output.writeInt32(3, message.width, false);
+
+            output.writeInt32(4, message.height, false);
+
+            output.writeString(5, message.format, false);
+
+            output.writeInt64(6, message.duration, false);
+
+            output.writeInt64(7, message.size, false);
+
+            if(message.hasBitrate)
+                output.writeInt32(8, message.bitrate, false);
+
+            for(String person : message.persons)
+            {
+                output.writeString(9, person, true);  
+            }
+
+            output.writeEnum(10, message.player.ordinal(), false);
+
+            if(message.copyright != null)
+                output.writeString(11, message.copyright, false);
+        }
+
+        public String getFieldName(int number)
+        {
+            switch(number)
+            {
+                case 1: return "uri";
+                case 2: return "title";
+                case 3: return "width";
+                case 4: return "height";
+                case 5: return "format";
+                case 6: return "duration";
+                case 7: return "size";
+                case 8: return "bitrate";
+                case 9: return "person";
+                case 10: return "player";
+                case 11: return "copyright";
+                default: return null;
+            }
+        }
+
+        public int getFieldNumber(String name)
+        {
+            final Integer number = fieldMap.get(name);
+            return number == null ? 0 : number.intValue();
+        }
+
+        final java.util.HashMap<String,Integer> fieldMap = new java.util.HashMap<String,Integer>();
+        {
+            fieldMap.put("uri", 1);
+            fieldMap.put("title", 2);
+            fieldMap.put("width", 3);
+            fieldMap.put("height", 4);
+            fieldMap.put("format", 5);
+            fieldMap.put("duration", 6);
+            fieldMap.put("size", 7);
+            fieldMap.put("bitrate", 8);
+            fieldMap.put("person", 9);
+            fieldMap.put("player", 10);
+            fieldMap.put("copyright", 11);
+        }
+    };
+
+    static final Schema<data.media.Image> IMAGE_SCHEMA = new Schema<data.media.Image>()
+    {
+        // schema methods
+
+        public data.media.Image newMessage()
+        {
+            return new data.media.Image();
+        }
+
+        public Class<data.media.Image> typeClass()
+        {
+            return data.media.Image.class;
+        }
+
+        public String messageName()
+        {
+            return data.media.Image.class.getSimpleName();
+        }
+
+        public String messageFullName()
+        {
+            return data.media.Image.class.getName();
+        }
+
+        public boolean isInitialized(data.media.Image message)
+        {
+            return true;
+        }
+
+        public void mergeFrom(Input input, data.media.Image message) throws IOException
+        {
+            for(int number = input.readFieldNumber(this);; number = input.readFieldNumber(this))
+            {
+                switch(number)
+                {
+                    case 0:
+                        return;
+                    case 1:
+                        message.uri = input.readString();
+                        break;
+                    case 2:
+                        message.title = input.readString();
+                        break;
+                    case 3:
+                        message.width = input.readInt32();
+                        break;
+                    case 4:
+                        message.height = input.readInt32();
+                        break;
+                    case 5:
+                        message.size = data.media.Image.Size.values()[input.readEnum()];
+                        break;
+                    default:
+                        input.handleUnknownField(number, this);
+                }   
+            }
+        }
+
+
+        public void writeTo(Output output, data.media.Image message) throws IOException
+        {
+            output.writeString(1, message.uri, false);
+
+            if(message.title != null)
+                output.writeString(2, message.title, false);
+
+            output.writeInt32(3, message.width, false);
+
+            output.writeInt32(4, message.height, false);
+
+            output.writeEnum(5, message.size.ordinal(), false);
+        }
+
+        public String getFieldName(int number)
+        {
+            switch(number)
+            {
+                case 1: return "uri";
+                case 2: return "title";
+                case 3: return "width";
+                case 4: return "height";
+                case 5: return "size";
+                default: return null;
+            }
+        }
+
+        public int getFieldNumber(String name)
+        {
+            final Integer number = fieldMap.get(name);
+            return number == null ? 0 : number.intValue();
+        }
+
+        final java.util.HashMap<String,Integer> fieldMap = new java.util.HashMap<String,Integer>();
+        {
+            fieldMap.put("uri", 1);
+            fieldMap.put("title", 2);
+            fieldMap.put("width", 3);
+            fieldMap.put("height", 4);
+            fieldMap.put("size", 5);
+        }
+    };
     
     public static final Transformer<data.media.MediaContent,MediaContent> MediaTransformer = new Transformer<data.media.MediaContent,MediaContent>()
     {

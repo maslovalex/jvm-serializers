@@ -19,13 +19,18 @@ JavaC_Opt := -Xlint:unchecked
 empty :=
 space := $(empty) $(empty)
 
+# On Unix, ":" (colon), on Windows, ";" (semicolon)
+path_sep = $(shell if expr "$(uname -s)" : 'CYGWIN' >/dev/null ; then printf ';' ; else printf ':' ; fi)
+
+mkcp = $(subst $(space),$(path_sep),$(1))
+
 protobuf_generator ?= protoc
 thrift_generator ?= thrift
-activemqprotobuf_cp := $(subst $(space),:,$(wildcard lib/activemq-*.jar))
+activemqprotobuf_cp := $(call mkcp,$(wildcard lib/activemq-*.jar))
 activemqprotobuf_generator ?= java -cp "$(activemqprotobuf_cp)" org.apache.activemq.protobuf.compiler.AltJavaGenerator
 cks_generator ?= java -jar lib/cks-tool.jar
-avro_cp ?= $(subst $(space),:,$(wildcard lib/avro-*.jar lib/jackson-*.jar lib/jopt-simple-*.jar))
-avro_generator ?= java -cp $(avro_cp) org.apache.avro.tool.Main
+avro_cp ?= $(call mkcp,$(wildcard lib/avro-*.jar lib/jackson-*.jar lib/jopt-simple-*.jar))
+avro_generator ?= java -cp "$(avro_cp)" org.apache.avro.tool.Main
 protostuff_compiler ?= $(wildcard lib/protostuff-compiler-*.jar)
 
 # Default to 'no' because we might not have these tools available.
@@ -65,11 +70,11 @@ Schemas = $(patsubst schema/%,%,$(wildcard $(SchemaExtensions:%=schema/*%)))
 
 build/gen-cp: schema
 	$(p2)mkdir -p build
-	$(p1)echo "$(subst $(space),:,$(Schemas:%=build/bytecode/gen/%))" > build/gen-cp
+	$(p1)echo "$(call mkcp,$(Schemas:%=build/bytecode/gen/%))" > build/gen-cp
 
 build/lib-cp: lib
 	$(p2)mkdir -p build
-	$(p1)echo "$(subst $(space),:,$(wildcard lib/*.jar))" > "$@"
+	$(p1)echo "$(call mkcp,$(wildcard lib/*.jar))" > "$@"
 
 ##########################################################################
 # Generate and Compile Bindings
@@ -108,7 +113,7 @@ build/gen/$(2).gen: schema/$(2)
 ifneq ($(findstring .activemq.proto,$(2)),)
 	$(p1)$(activemqprotobuf_generator) --out=build/gen/$(2) $$<
 else ifneq ($(findstring .protostuff.proto,$(2)),)
-	$(p1)java -Dsource=$$< -Doutput=java_bean -Doptions=builder_pattern,alphanumeric,generate_field_map,separate_schema -DoutputDir=build/gen/$(2) -jar $(protostuff_compiler)
+	$(p1)java -Dsource=$$< -Doutput=java_bean -Doptions=builder_pattern,generate_field_map,separate_schema -DoutputDir=build/gen/$(2) -jar $(protostuff_compiler)
 else ifneq ($(findstring .proto,$(2)),)
 	$(p1)$(protobuf_generator) --java_out=build/gen/$(2) $$<
 else ifneq ($(findstring .thrift,$(2)),)
@@ -160,7 +165,7 @@ JavaSourceDirs = $(shell find $(JavaSourceRoots) -type d)
 JavaSourceFiles = $(shell find $(JavaSourceRoots) -type f -name '*.java')
 ScalaSourceFiles = $(shell find $(JavaSourceRoots) -type f -name '*.scala')
 
-build/bytecode/main.compile : $(JavaSourceRoots) $(JavaSourceDirs) $(JavaSourceFiles) $(ScalaSourceFiles) lib build/lib-cp build/gen-cp $(wildcard lib/*.jar) $(Schemas:%=build/bytecode/gen/%.compile)
+build/bytecode/main.compile: $(JavaSourceRoots) $(JavaSourceDirs) $(JavaSourceFiles) $(ScalaSourceFiles) lib build/lib-cp build/gen-cp $(wildcard lib/*.jar) $(Schemas:%=build/bytecode/gen/%.compile)
 	$(p2)[ ! -e build/bytecode/main ] || rm -r build/bytecode/main
 	$(p2)mkdir -p build/bytecode/main
 	$(p2)touch "$@"
@@ -175,7 +180,7 @@ else
 	# Compile: $(JavaSourceRoots) [javac]
 	$(p1)$(JavaC) $(JavaC_Opt) -d build/bytecode/main \
 		-deprecation \
-		-classpath "build/bytecode/main:$(shell cat build/lib-cp):$(shell cat build/gen-cp)" \
+		-classpath "$(call mkcp,build/bytecode/main $(shell cat build/lib-cp) $(shell cat build/gen-cp))" \
 		$(JavaSourceFiles)
 endif
 
