@@ -1,6 +1,10 @@
 package data.media;
 
 import java.util.List;
+
+import org.msgpack.annotation.Optional;
+import jsonij.json.annotation.JSONIgnore;
+
 import static data.ReprUtil.repr;
 
 @SuppressWarnings("serial")
@@ -10,6 +14,7 @@ public class Media implements java.io.Serializable {
 	}
 
 	public String uri;
+        @Optional // msgpack requires this
 	public String title;        // Can be unset.
 	public int width;
 	public int height;
@@ -17,9 +22,13 @@ public class Media implements java.io.Serializable {
 	public long duration;
 	public long size;
 	public int bitrate;         // Can be unset.
+	@JSONIgnore // required by JSONiJ
 	public boolean hasBitrate;
 	public List<String> persons;
+	
 	public Player player;
+
+	@Optional // msgpack requires this
 	public String copyright;    // Can be unset.
 
 	public Media() {}
@@ -92,11 +101,101 @@ public class Media implements java.io.Serializable {
 		sb.append(", format=").append(repr(format));
 		sb.append(", duration=").append(duration);
 		sb.append(", size=").append(size);
-		sb.append(", bitrate=").append(hasBitrate ? Integer.toString(bitrate) : "?");
+		sb.append(", hasBitrate=").append(hasBitrate);
+		sb.append(", bitrate=").append(String.valueOf(bitrate));
 		sb.append(", persons=").append(repr(persons));
 		sb.append(", player=").append(player);
 		sb.append(", copyright=").append(copyright);
 		sb.append("]");
 		return sb.toString();
 	}
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
+
+    public void setSize(long size) {
+        this.size = size;
+    }
+
+    public void setBitrate(int bitrate) {
+        this.bitrate = bitrate;
+        this.hasBitrate = true;
+    }
+
+    public void setPersons(List<String> persons) {
+        this.persons = persons;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
+    public void setCopyright(String copyright) {
+        this.copyright = copyright;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public int getBitrate() {
+        return bitrate;
+    }
+
+    public List<String> getPersons() {
+        return persons;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public String getCopyright() {
+        return copyright;
+    }
 }

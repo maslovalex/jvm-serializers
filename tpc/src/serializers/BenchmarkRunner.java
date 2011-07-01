@@ -243,7 +243,7 @@ public class BenchmarkRunner
 		// Load serializers.
 
 		TestGroups groups = new TestGroups();
-
+		
 		// Binary Formats; language-specific ones
                 JavaBuiltIn.register(groups);
                 JavaManual.register(groups);
@@ -251,8 +251,8 @@ public class BenchmarkRunner
 		// hessian and kryo are Java object serializations
                 Hessian.register(groups);
                 Kryo.register(groups);
-
-                // Binary formats, generic: protobuf, thrift, avro, kryo, CKS
+                
+                // Binary formats, generic: protobuf, thrift, avro, kryo, CKS, msgpack
                 Protobuf.register(groups);
 		ActiveMQProtobuf.register(groups);
 		Protostuff.register(groups);
@@ -260,14 +260,31 @@ public class BenchmarkRunner
 		AvroSpecific.register(groups);
 		AvroGeneric.register(groups);
 		CksBinary.register(groups);
+                MsgPack.register(groups);
 
 		// JSON
 		JsonJacksonManual.register(groups);
+		JsonJacksonManualTree.register(groups);
+		JsonJacksonManualTreeWithStrings.register(groups);
 		JsonJacksonDatabind.register(groups);
+		JsonJacksonDatabindWithStrings.register(groups);
 		JsonTwoLattes.register(groups);
 		ProtostuffJson.register(groups);
 		ProtobufJson.register(groups);
-		Gson.register(groups);
+		GsonManual.register(groups);
+		GsonManualTree.register(groups);
+                Gson.register(groups);
+                SvensonJsonDatabind.register(groups);
+                FlexjsonDatabind.register(groups);
+                JsonLibJsonDatabind.register(groups);
+                FastJSONDatabind.register(groups);
+                JsonSimpleManualTree.register(groups);
+                JsonSmartManualTree.register(groups);
+                JsonDotOrgManualTree.register(groups);
+                JsonijJpath.register(groups);
+                JsonijManualTree.register(groups);
+                ArgoManualTree.register(groups);
+                JsonPathDeserializerOnly.register(groups);
 		// Then JSON-like
                 // CKS text is textual JSON-like format
                 CksText.register(groups);
@@ -900,8 +917,9 @@ public class BenchmarkRunner
 		int headerSize = 30;
 
 		int maxPixels = 300 * 1000; // Limit set by Google's Chart API.
-		int width = 700;
-		int maxHeight = maxPixels / width;
+		
+		int maxHeight = 600;
+        int width = maxPixels / maxHeight;
 
 		int barThickness = 10;
 		int barSpacing = 10;

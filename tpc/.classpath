@@ -11,6 +11,8 @@
 	<classpathentry kind="lib" path="lib/libthrift.jar"/>
 	<classpathentry kind="lib" path="lib/commons-lang-2.4.jar"/>
 	<classpathentry kind="lib" path="lib/stax-api-1.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-beanutils-1.8.3.jar"/>
+	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar"/>
 	<classpathentry kind="lib" path="lib/commons-httpclient-3.1.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.3.jar"/>
@@ -54,11 +56,22 @@
 	<classpathentry kind="lib" path="lib/protostuff-json-1.0.0.M7.jar"/>
 	<classpathentry kind="lib" path="lib/protostuff-runtime-1.0.0.M7.jar"/>
 	<classpathentry kind="lib" path="lib/protostuff-xml-1.0.0.M7.jar"/>
+	<classpathentry kind="lib" path="lib/svenson-1.4.0.jar"/>
+	<classpathentry kind="lib" path="lib/json-lib-2.4-jdk15.jar"/>
+	<classpathentry kind="lib" path="lib/ezmorph-1.0.6.jar"/>
+	<classpathentry kind="lib" path="lib/fastjson-1.0.5.jar"/>
+	<classpathentry kind="lib" path="lib/json_simple-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/json-smart-1.0.8.jar"/>
+	<classpathentry kind="lib" path="lib/json.org-ref-2011.06.21.jar"/>
+	<classpathentry kind="lib" path="lib/jsonij-0.2.7.jar"/>
+	<classpathentry kind="lib" path="lib/argo-2.10.jar"/>
+	<classpathentry kind="lib" path="lib/jsonpath-2011.06.23.jar"/>
+	<classpathentry kind="lib" path="lib/flexjson-2.1.jar"/>
 	<classpathentry kind="lib" path="lib/bytelist-0.1.jar"/>
 	<classpathentry kind="lib" path="lib/jvyaml.jar"/>
 	<classpathentry kind="lib" path="lib/jvyamlb-0.2.5.jar"/>
 	<classpathentry kind="lib" path="lib/jyaml-1.3.jar"/>
-	<classpathentry kind="lib" path="lib/snakeyaml-1.8-SNAPSHOT.jar"/>
-	<classpathentry kind="lib" path="lib/yamlbeans-1.05.jar"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="lib" path="lib/snakeyaml-1.8.jar"/>
+	<classpathentry kind="lib" path="lib/yamlbeans-1.06.jar"/>
+	<classpathentry kind="output" path="build"/>
 </classpath>

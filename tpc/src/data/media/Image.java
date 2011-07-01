@@ -2,13 +2,19 @@ package data.media;
 
 import static data.ReprUtil.repr;
 
+import org.msgpack.annotation.Optional;
+
 public class Image implements java.io.Serializable
 {
-	public enum Size {
+    private static final long serialVersionUID = 1L;
+
+    public enum Size {
 		SMALL, LARGE
 	}
 
 	public String uri;
+
+	@Optional // msgpack
 	public String title;  // Can be null
 	public int width;
 	public int height;
@@ -63,4 +69,44 @@ public class Image implements java.io.Serializable
 		sb.append("]");
 		return sb.toString();
 	}
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public void setSize(Size size) {
+        this.size = size;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public Size getSize() {
+        return size;
+    }
 }
