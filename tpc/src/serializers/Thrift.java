@@ -1,5 +1,6 @@
 package serializers;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,14 +11,16 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import data.media.MediaTransformer;
+
 import serializers.thrift.media.*;
 
 public class Thrift
 {
 	public static void register(TestGroups groups)
 	{
-		groups.media.add(MediaTransformer, new MediaSerializer(ProtocolSpec.DefaultBinary));
-		groups.media.add(MediaTransformer, new MediaSerializer(ProtocolSpec.CompactBinary));
+		groups.media.add(mediaTransformer, new MediaSerializer(ProtocolSpec.DefaultBinary));
+		groups.media.add(mediaTransformer, new MediaSerializer(ProtocolSpec.CompactBinary));
 	}
 
 	// ------------------------------------------------------------
@@ -63,14 +66,48 @@ public class Thrift
 		{
 			return "thrift" + spec.suffix;
 		}
+
+	        @Override
+	        public final void serializeItems(MediaContent[] items, OutputStream out0) throws Exception
+	        {
+	            DataOutputStream out = new DataOutputStream(out0);
+	            TSerializer ser = new TSerializer(spec.factory);
+	            for (MediaContent item : items) {
+	                byte[] data = ser.serialize(item);
+	                out.writeInt(data.length);
+	                out.write(data);
+	            }
+	            // should we write end marker (length of 0) or not? For now, omit it
+	            out.flush();
+	        }
+
+	        @Override
+	        public MediaContent[] deserializeItems(InputStream in0, int numberOfItems) throws Exception 
+	        {
+	            DataInputStream in = new DataInputStream(in0);
+	            TDeserializer deser = new TDeserializer(spec.factory);
+	            MediaContent[] result = new MediaContent[numberOfItems];
+	            for (int i = 0; i < numberOfItems; ++i) {
+	                int len = in.readInt();
+	                byte[] data = new byte[len];
+	                in.readFully(data);
+                        MediaContent content = new MediaContent();
+                        deser.deserialize(content, data);
+	                result[i] = content;
+	            }
+	            return result;
+	        }	
 	}
 
 	// ------------------------------------------------------------
 	// Transformers
 
-	public static final Transformer<data.media.MediaContent,MediaContent> MediaTransformer = new Transformer<data.media.MediaContent,MediaContent>()
+	public static final MediaTransformer<MediaContent> mediaTransformer = new MediaTransformer<MediaContent>()
 	{
-		// ----------------------------------------------------------
+            @Override
+            public MediaContent[] resultArray(int size) { return new MediaContent[size]; }
+
+	    // ----------------------------------------------------------
 		// Forward
 
 		public MediaContent forward(data.media.MediaContent mc)

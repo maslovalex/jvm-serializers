@@ -243,7 +243,7 @@ public class BenchmarkRunner
 		// Load serializers.
 
 		TestGroups groups = new TestGroups();
-		
+
 		// Binary Formats; language-specific ones
                 JavaBuiltIn.register(groups);
                 JavaManual.register(groups);
@@ -251,7 +251,7 @@ public class BenchmarkRunner
 		// hessian and kryo are Java object serializations
                 Hessian.register(groups);
                 Kryo.register(groups);
-                
+
                 // Binary formats, generic: protobuf, thrift, avro, kryo, CKS, msgpack
                 Protobuf.register(groups);
 		ActiveMQProtobuf.register(groups);
@@ -298,14 +298,14 @@ public class BenchmarkRunner
                 JacksonSmileDatabind.register(groups);
                 ProtostuffSmile.register(groups);
 
-        // Yaml
+		// Yaml
 		SnakeYaml.register(groups);
 		SnakeYamlShared.register(groups);
 		Jvyaml.register(groups);
 		Jvyamlb.register(groups);
 		YamlBeans.register(groups);
 		JYaml.register(groups);
-                
+
 		// XML-based formats.
 		Stax.register(groups);
 		XStream.register(groups);
@@ -810,7 +810,7 @@ public class BenchmarkRunner
 	{
 		Object specialInput;
 		String name = serializer.getName();
-		
+
 		try {
 			specialInput = transformer.forward(value);
 		}
@@ -823,7 +823,7 @@ public class BenchmarkRunner
 		}
 
 		byte[] array;
-		
+
 		try {
 			array = serializer.serialize(specialInput);
 		}
@@ -836,7 +836,7 @@ public class BenchmarkRunner
 		}
 
 		Object specialOutput;
-		
+
 		try {
 			specialOutput = serializer.deserialize(array);
 		}
@@ -917,7 +917,7 @@ public class BenchmarkRunner
 		int headerSize = 30;
 
 		int maxPixels = 300 * 1000; // Limit set by Google's Chart API.
-		
+
 		int maxHeight = 600;
         int width = maxPixels / maxHeight;
 

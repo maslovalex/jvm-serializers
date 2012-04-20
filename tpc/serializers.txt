@@ -5,6 +5,9 @@ scala/sbinary
 kryo
 kryo-opt
 kryo-manual
+msgpack
+wobly
+wobly-compact
 hessian
 protobuf
 protobuf/activemq+alt
@@ -31,6 +34,7 @@ json/flexjson/databind
 json/json-lib-databind
 json/fastjson-databind
 json/json.simple/manual/tree
+json/json.simple/manual
 json/json-smart/manual/tree
 json/org.json/manual/tree
 json/jsonij-jpath

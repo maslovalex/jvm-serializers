@@ -2,6 +2,7 @@ package data.media;
 
 import java.util.List;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.msgpack.annotation.Optional;
 import jsonij.json.annotation.JSONIgnore;
 
@@ -10,11 +11,19 @@ import static data.ReprUtil.repr;
 @SuppressWarnings("serial")
 public class Media implements java.io.Serializable {
 	public enum Player {
-		JAVA, FLASH
+		JAVA, FLASH;
+		
+		public static Player find(String str) {
+		    if (str == "JAVA") return JAVA;
+		    if (str == "FLASH") return FLASH;
+		    if ("JAVA".equals(str)) return JAVA;
+		    if ("FLASH".equals(str)) return FLASH;
+		    String desc = (str == null) ? "NULL" : String.format("'%s'", str);
+		    throw new IllegalArgumentException("No Player value of "+desc);
+		}
 	}
 
 	public String uri;
-        @Optional // msgpack requires this
 	public String title;        // Can be unset.
 	public int width;
 	public int height;
@@ -22,13 +31,14 @@ public class Media implements java.io.Serializable {
 	public long duration;
 	public long size;
 	public int bitrate;         // Can be unset.
+
 	@JSONIgnore // required by JSONiJ
+	@JsonIgnore // by Jackson
 	public boolean hasBitrate;
 	public List<String> persons;
 	
 	public Player player;
 
-	@Optional // msgpack requires this
 	public String copyright;    // Can be unset.
 
 	public Media() {}
