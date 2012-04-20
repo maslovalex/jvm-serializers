@@ -10,7 +10,8 @@ import data.media.MediaContent;
 
 public class SnakeYaml {
 	public static void register(TestGroups groups) {
-	    groups.media.add(JavaBuiltIn.mediaTransformer, new GenericSerializer<MediaContent>("yaml/snakeyaml", MediaContent.class));
+	    groups.media.add(JavaBuiltIn.mediaTransformer,
+			     SnakeYaml.<MediaContent> GenericSerializer());
 	}
 
 	public static <T> Serializer<T> GenericSerializer() {

@@ -15,7 +15,7 @@ public class JYaml
 {
 	public static void register(TestGroups groups)
 	{
-		groups.media.add(JavaBuiltIn.MediaTransformer, JYaml.<MediaContent>GenericSerializer());
+		groups.media.add(JavaBuiltIn.mediaTransformer, JYaml.<MediaContent>GenericSerializer());
 	}
 
 	public static <T> Serializer<T> GenericSerializer()
@@ -30,14 +30,14 @@ public class JYaml
 
 	public static Serializer<Object> GenericSerializer = new Serializer<Object>()
 	{
-	    
+
 //	    private Yaml yaml;
 //
 //        {
 //            yaml = new Yaml();
 //	    }
-	    
-	    
+
+
 		public Object deserialize(byte[] array) throws Exception
 		{
 			ByteArrayInputStream in = new ByteArrayInputStream(array);

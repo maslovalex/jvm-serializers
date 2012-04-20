@@ -10,7 +10,7 @@ import data.media.MediaContent;
 
 public class SnakeYamlShared {
     public static void register(TestGroups groups) {
-        groups.media.add(JavaBuiltIn.MediaTransformer,
+        groups.media.add(JavaBuiltIn.mediaTransformer,
                 SnakeYamlShared.<MediaContent> GenericSerializer());
     }
 
